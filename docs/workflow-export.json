@@ -1,0 +1,1027 @@
+{
+  "name": "Health-facts Daily Shorts",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -688,
+        -704
+      ],
+      "id": "2f4c0c9f-b4af-4a33-97dc-0506a44b0422",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1QSUE0OeZ-Y9x6w5dKCSHZEbsKAMmOVWM9umgJdvlgBs",
+          "mode": "list",
+          "cachedResultName": "Topics",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QSUE0OeZ-Y9x6w5dKCSHZEbsKAMmOVWM9umgJdvlgBs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QSUE0OeZ-Y9x6w5dKCSHZEbsKAMmOVWM9umgJdvlgBs/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "used",
+              "lookupValue": "FALSE"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -384,
+        -704
+      ],
+      "id": "265629d8-ae0f-46b2-b898-c134d04a8532",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "S6FPgDFNrXH8ur4F",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"model\": \"llama-3.3-70b-versatile\",\n    \"messages\": [\n      {\n        \"role\": \"user\",\n        \"content\": \"You are writing a 45-60 second YouTube Short script for a nutrition-facts channel called Health-facts, write the voiceover script using short, punchy sentences. Use commas frequently for brief pauses, ellipses (...) for suspenseful transitions, and exclamation marks for energy. Do not write long, running sentences. \\n\\nTopic: {{ $json.topic }}\\n\\nResearch 3-4 accurate, interesting, non-obvious facts about this topic. Return ONLY valid JSON, no markdown fences, in this exact shape:\\n{\\\"title\\\": \\\"...\\\", \\\"hook\\\": \\\"...\\\", \\\"script\\\": \\\"...\\\", \\\"facts\\\": [\\\"...\\\"], \\\"image_search_terms\\\": [\\\"...\\\"], \\\"description\\\": \\\"...\\\", \\\"tags\\\": [\\\"...\\\"], \\\"hashtags\\\": [\\\"#Shorts\\\", \\\"...\\\"]}\"\n      }\n    ]\n  }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -192,
+        -704
+      ],
+      "id": "6a52cad3-0439-4d8a-89fd-e34aa219f1a4",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "e3OjQCh3avEdw2Qs",
+          "name": "Header Auth account"
+        },
+        "httpBearerAuth": {
+          "id": "W1qA2bLMFY70PuBT",
+          "name": "Bearer Auth account"
+        },
+        "groqApi": {
+          "id": "RscxsnqKLWTcX6c4",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: \"llama-3.3-70b-versatile\",\n  messages: [\n    {\n      role: \"user\",\n      content: \"You are a nutrition fact-checker. For each claim below, rate your confidence as HIGH, MEDIUM, or LOW based on how well-established and commonly cited it is. If MEDIUM or LOW, suggest a corrected or safer version.\\n\\nClaims:\\n\" + $json.factsList + \"\\n\\nReturn ONLY valid JSON, no markdown fences: { \\\"results\\\": [ { \\\"claim\\\": \\\"...\\\", \\\"confidence\\\": \\\"HIGH|MEDIUM|LOW\\\", \\\"correction\\\": \\\"...\\\" } ] }\"\n    }\n  ]\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        176,
+        -704
+      ],
+      "id": "8a75568b-a317-467c-858e-795e6d3e1584",
+      "name": "HTTP Request (fact-check)",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "e3OjQCh3avEdw2Qs",
+          "name": "Header Auth account"
+        },
+        "groqApi": {
+          "id": "RscxsnqKLWTcX6c4",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nconst cleaned = raw.replace(/```json|```/g, '').trim();\nconst parsed = JSON.parse(cleaned);\n\nconst scriptData = $('Parse Script').first().json;\n\nconst hasLowConfidence = parsed.results.some(r => r.confidence !== 'HIGH');\n\nreturn [{\n  json: {\n    ...scriptData,\n    factCheck: parsed.results,\n    needsReview: hasLowConfidence\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        -704
+      ],
+      "id": "aff6cc33-6bcc-46aa-be41-f438ec73129b",
+      "name": "Code node (parse the fact-check response)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nconst cleaned = raw.replace(/```json|```/g, '').trim();\nconst parsed = JSON.parse(cleaned);\nparsed.factsList = parsed.facts.map((f, i) => `${i + 1}. ${f}`).join('\\n');\nreturn [{ json: parsed }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -704
+      ],
+      "id": "50256263-9069-4971-b528-a881241a14a1",
+      "name": "Parse Script"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4baca971-5090-4ab2-a8c5-842052bfc546",
+              "leftValue": "={{ $json.needsReview }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -400,
+        -464
+      ],
+      "id": "c26ca4c2-e1b6-4eac-81bb-891937e46179",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "mygmail.ID@gmail.com",
+        "subject": "=⚠️ Health-facts script needs review — {{ $json.title }}",
+        "emailType": "text",
+        "message": "=Topic: {{ $json.title }}     Flagged facts:    {{ $json.factCheck.filter(f => f.confidence !== 'HIGH').map(f => `- ${f.claim}\\n  → Suggested: ${f.correction}`).join('\\n\\n') }}     Full script for reference:    {{ $json.script }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -688,
+        -480
+      ],
+      "id": "0dfa6eda-5bb9-46b2-b8e7-8637254d8b12",
+      "name": "Send a message",
+      "webhookId": "d2682b9a-aa34-4a65-8f35-ce369db5d2c7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "hLGIZGmE24ftKY6l",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://piper-bridge:5001/synthesize",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n     \"text\": \"{{ $json.hook }} ... ... {{ $json.script }}\",\n     \"out_path\": \"/data/voice.wav\"\n   }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -176,
+        -448
+      ],
+      "id": "a4caee86-567a-4eec-9b0e-3ba3dcdf7490",
+      "name": "Node 9 (the false branch of your IF node)"
+    },
+    {
+      "parameters": {
+        "url": "https://api.pexels.com/v1/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.image_search_terms }}"
+            },
+            {
+              "name": "per_page",
+              "value": "1"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "<API_KEY>"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        384,
+        -448
+      ],
+      "id": "e9c81b15-346b-451e-8c8d-6a65e2a44807",
+      "name": "HTTP Request1",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "W1qA2bLMFY70PuBT",
+          "name": "Bearer Auth account"
+        },
+        "httpHeaderAuth": {
+          "id": "e3OjQCh3avEdw2Qs",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b0d24f23-a028-4e7c-a227-7c8a5f4faed9",
+              "name": "image_search_terms",
+              "value": "={{ $('Parse Script').first().json.image_search_terms }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        16,
+        -448
+      ],
+      "id": "e1832b95-5d93-4e34-be0a-06c411bd2067",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "image_search_terms",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        176,
+        -448
+      ],
+      "id": "5fb7a076-8e5a-48c0-a535-8347ba6f6228",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "70dc1c95-f238-4219-bb2b-3b6c97e239c8",
+              "leftValue": "={{ $json.photos.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -688,
+        -144
+      ],
+      "id": "ffa24d10-5fde-470b-90ec-a6d289079f35",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d9ebed98-688f-4a30-b486-231e3ec63304",
+              "name": "imageUrl",
+              "value": "={{ $json.photos[0].src.large }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -480,
+        -240
+      ],
+      "id": "9daaa4d2-7ea9-4425-9ba6-ca9f12a48eb0",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "url": "https://pixabay.com/api/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "<API_KEY>"
+            },
+            {
+              "name": "q",
+              "value": "={{ $('Split Out').item.json.image_search_terms }}"
+            },
+            {
+              "name": "image_type",
+              "value": "photo"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -336,
+        -128
+      ],
+      "id": "7098e1ca-d4f0-4324-99cb-00593ae8d224",
+      "name": "Pixabay HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "e3OjQCh3avEdw2Qs",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3c85cbc9-8892-413d-a932-003ac5687dbe",
+              "name": "imageUrl",
+              "value": "={{ $json.hits[0].largeImageURL }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -176,
+        -128
+      ],
+      "id": "2f3749eb-0656-4d32-bc96-081d7254c286",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -16,
+        -224
+      ],
+      "id": "bb75c88d-aedb-4333-9da9-e96aa08e4382",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.imageUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        176,
+        -176
+      ],
+      "id": "7d3ef760-624a-472c-9536-34b539e85b97",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ \"/data/img\" + ($itemIndex + 1) + \".jpg\" }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        384,
+        -192
+      ],
+      "id": "54ec540c-41d2-4519-ab8b-660d6f0b5b7f",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Retrieve the script and set the total audio duration (in seconds)\nconst script = $('Parse Script').first().json.script; \nconst totalAudioDuration = 60; // Replace with dynamic duration if calculating via ffprobe\n\nconst words = script.split(' ');\nconst wordsPerChunk = 8; // Distribute into chunks as recommended\nlet srtContent = \"\";\nlet chunkIndex = 1;\nlet currentTime = 0;\n\n// Calculate the precise time per word\nconst timePerWord = totalAudioDuration / words.length;\n\n// Convert seconds into standard SRT timestamp format: HH:MM:SS,ms\nfunction formatTime(seconds) {\n    const date = new Date(0);\n    date.setSeconds(Math.floor(seconds));\n    date.setMilliseconds((seconds % 1) * 1000);\n    return date.toISOString().substr(11, 12).replace('.', ',');\n}\n\n// Loop to assemble the subtitle blocks\nfor (let i = 0; i < words.length; i += wordsPerChunk) {\n    const chunk = words.slice(i, i + wordsPerChunk).join(' ');\n    const startTime = currentTime;\n    const endTime = startTime + (chunk.split(' ').length * timePerWord);\n    \n    srtContent += `${chunkIndex}\\n`;\n    srtContent += `${formatTime(startTime)} --> ${formatTime(endTime)}\\n`;\n    srtContent += `${chunk}\\n\\n`;\n    \n    currentTime = endTime;\n    chunkIndex++;\n}\n\nreturn {\n    srt_data: srtContent\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -688,
+        48
+      ],
+      "id": "07e8d288-1767-4ad5-a1ec-4a941b591fde",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ \"/data/captions\" + \".srt\" }}",
+        "dataPropertyName": "srt_data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        -352,
+        48
+      ],
+      "id": "c00cb40a-92ba-4997-bef2-1116853c6ead",
+      "name": "Read/Write Files from Disk1"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "srt_data",
+        "binaryPropertyName": "srt_data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        -528,
+        48
+      ],
+      "id": "b59f5095-0e69-4f65-a6c7-d90fe39cbe6e",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://ffmpeg-bridge:5002/assemble",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  command: \"DURATION=$(ffprobe -v error -show_entries format=duration -of csv=p=0 /data/voice.wav); DURATION_INT=${DURATION%.*}; PER_IMAGE=$(( DURATION_INT / 4 + 1 )); ffmpeg -y -loop 1 -t $PER_IMAGE -i /data/img0.jpg -loop 1 -t $PER_IMAGE -i /data/img1.jpg -loop 1 -t $PER_IMAGE -i /data/img2.jpg -loop 1 -t $PER_IMAGE -i /data/img3.jpg -i /data/voice.wav -filter_complex \\\"[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,zoompan=z='min(zoom+0.0015,1.2)':d=200:s=1080x1920[v0];[1:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,zoompan=z='min(zoom+0.0015,1.2)':d=200:s=1080x1920[v1];[2:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,zoompan=z='min(zoom+0.0015,1.2)':d=200:s=1080x1920[v2];[3:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,zoompan=z='min(zoom+0.0015,1.2)':d=200:s=1080x1920[v3];[v0][v1][v2][v3]concat=n=4:v=1:a=0[vout];[vout]subtitles=/data/captions.srt:force_style='FontName=Arial,FontSize=20,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BorderStyle=1,Outline=2,Alignment=2,MarginV=180'[final]\\\" -map \\\"[final]\\\" -map 4:a -c:v libx264 -c:a aac -shortest -pix_fmt yuv420p /data/output.mp4\"\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -144,
+        48
+      ],
+      "id": "bf58d89f-52a0-48ea-a0a4-9bea3de24da4",
+      "name": "HTTP Request3"
+    },
+    {
+      "parameters": {
+        "fileSelector": "/data/output.mp4",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        64,
+        48
+      ],
+      "id": "c322e3f3-0b0e-4eda-b245-9db3a922e996",
+      "name": "Read/Write Files from Disk2"
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{ $('Parse Script').item.json.title }}",
+        "regionCode": "IN",
+        "categoryId": "=27",
+        "options": {
+          "description": "={{ $('Parse Script').item.json.description }}",
+          "privacyStatus": "public"
+        }
+      },
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        272,
+        48
+      ],
+      "id": "227babce-c5f3-4cf3-b0b7-9a23a640cd58",
+      "name": "Upload a video",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "dnCBoCoxaPG9U8aZ",
+          "name": "YouTube account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1QSUE0OeZ-Y9x6w5dKCSHZEbsKAMmOVWM9umgJdvlgBs",
+          "mode": "list",
+          "cachedResultName": "Topics",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QSUE0OeZ-Y9x6w5dKCSHZEbsKAMmOVWM9umgJdvlgBs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QSUE0OeZ-Y9x6w5dKCSHZEbsKAMmOVWM9umgJdvlgBs/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "topic": "={{ $('Get row(s) in sheet').item.json.topic }}",
+            "used": "TRUE",
+            "used_data": "={{ $now.format('yyyy-MM-dd HH:mm') }}",
+            "video_url": "=https://youtu.be/{{ $json.uploadId }}"
+          },
+          "matchingColumns": [
+            "topic"
+          ],
+          "schema": [
+            {
+              "id": "topic",
+              "displayName": "topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "used",
+              "displayName": "used",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "used_data",
+              "displayName": "used_data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "video_url",
+              "displayName": "video_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        480,
+        48
+      ],
+      "id": "e45bc234-9947-4bf5-af78-122f6f1b494f",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "S6FPgDFNrXH8ur4F",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Code node (parse the fact-check response)": [
+      {
+        "json": {
+          "title": "Sunshine in a Bowl: Vitamin C Sources Beyond Oranges",
+          "hook": "Think you need to eat oranges to get your daily dose of vitamin C? Think again!",
+          "script": "Hey everyone, welcome back to Health-facts! When we think of vitamin C, oranges usually come to mind. But there are plenty of other foods packed with this essential nutrient. From fruits like kiwis and strawberries, to veggies like bell peppers and broccoli, you can get your daily dose of vitamin C from a variety of sources. In fact, did you know that one cup of chopped bell peppers contains more vitamin C than one medium orange? Or that cooked broccoli can provide up to 100% of your daily vitamin C needs? Kiwis are also a powerhouse, with one medium kiwi providing about 70% of your daily vitamin C needs. And if you're looking for something a little different, try papaya - one medium papaya provides over 100% of your daily vitamin C needs. So next time you're at the grocery store, consider picking up some of these vitamin C-rich foods to add some variety to your diet.",
+          "facts": [
+            "One cup of chopped bell peppers contains more vitamin C than one medium orange",
+            "Cooked broccoli can provide up to 100% of your daily vitamin C needs",
+            "One medium kiwi provides about 70% of your daily vitamin C needs",
+            "One medium papaya provides over 100% of your daily vitamin C needs"
+          ],
+          "image_search_terms": [
+            "bell peppers",
+            "broccoli",
+            "kiwis",
+            "papaya"
+          ],
+          "description": "Explore the world of vitamin C beyond oranges and discover new foods to boost your immune system and overall health.",
+          "tags": [
+            "vitamin C",
+            "nutrition",
+            "health",
+            "fruit",
+            "vegetables"
+          ],
+          "hashtags": [
+            "#Shorts",
+            "#VitaminC",
+            "#NutritionFacts",
+            "#HealthyEating"
+          ],
+          "factsList": "1. One cup of chopped bell peppers contains more vitamin C than one medium orange\n2. Cooked broccoli can provide up to 100% of your daily vitamin C needs\n3. One medium kiwi provides about 70% of your daily vitamin C needs\n4. One medium papaya provides over 100% of your daily vitamin C needs",
+          "factCheck": [
+            {
+              "claim": "One cup of chopped bell peppers contains more vitamin C than one medium orange",
+              "confidence": "HIGH",
+              "correction": ""
+            },
+            {
+              "claim": "Cooked broccoli can provide up to 100% of your daily vitamin C needs",
+              "confidence": "LOW",
+              "correction": "Cooked broccoli is a good source of vitamin C, but one serving is unlikely to provide 100% of the daily recommended intake. A more accurate statement would be that broccoli is a good source of vitamin C, with one cup of cooked broccoli providing around 100mg or about 100-150% of the daily value, but this can vary based on cooking method and specific broccoli variety."
+            },
+            {
+              "claim": "One medium kiwi provides about 70% of your daily vitamin C needs",
+              "confidence": "HIGH",
+              "correction": ""
+            },
+            {
+              "claim": "One medium papaya provides over 100% of your daily vitamin C needs",
+              "confidence": "HIGH",
+              "correction": ""
+            }
+          ],
+          "needsReview": false
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Parse Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request (fact-check)": {
+      "main": [
+        [
+          {
+            "node": "Code node (parse the fact-check response)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Script": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (fact-check)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code node (parse the fact-check response)": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Node 9 (the false branch of your IF node)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Node 9 (the false branch of your IF node)": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pixabay HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pixabay HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk2": {
+      "main": [
+        [
+          {
+            "node": "Upload a video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload a video": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "0a098595-4a69-4914-9d2d-7ccee56f3c6e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "348497d9ebe242acad438bca645577e73e602e55771b703061b85aa45b34290a"
+  },
+  "nodeGroups": [],
+  "id": "YTOJOWEc21lIAO2V",
+  "tags": []
+}
